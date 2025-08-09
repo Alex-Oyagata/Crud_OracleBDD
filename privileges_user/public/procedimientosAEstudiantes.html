@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Listado Estuduantes</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background: linear-gradient(135deg, #ccefff, #e6f7ff, #b3e0ff);
+      min-height: 100vh;
+      background-attachment: fixed;
+    }
+
+    .card {
+      background-color: rgba(255, 255, 255, 0.95);
+      border-radius: 1rem;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      max-width: 900px;
+      margin: auto;
+    }
+
+    h1 {
+      color: #007acc;
+      margin-bottom: 20px;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      background-color: #007acc;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      margin: 10px 10px 10px 0;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #005f99;
+    }
+
+    #error {
+      color: red;
+      margin-top: 10px;
+    }
+
+    pre {
+      background-color: #f4f4f4;
+      padding: 15px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-family: Consolas, monospace;
+      font-size: 14px;
+      color: #0d6efd;
+      white-space: pre-wrap;
+      margin-top: 20px;
+      max-height: 400px;
+    }
+
+    #output {
+      background-color: #eef6fb;
+      border: 1px solid #b3d4fc;
+      padding: 15px;
+      border-radius: 6px;
+      margin-top: 20px;
+      white-space: pre-wrap;
+      font-family: Consolas, monospace;
+      color: #222;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Procedimientos Anonimo Listado de Estudiantes</h1>
+
+    <!-- Botones para las rutas -->
+    <button onclick="cargarProcedimiento('/procedimientosActualizarEstudiantes')">Listar Datos</button>
+
+
+    <p id="error"></p>
+    <div id="output"></div>
+    <pre id="codigo"></pre>
+  </div>
+
+  <script>
+    const outputDiv = document.getElementById('output');
+    const codigoPre = document.getElementById('codigo');
+    const errorP = document.getElementById('error');
+
+    async function cargarProcedimiento(ruta) {
+      errorP.textContent = '';
+      outputDiv.textContent = 'Cargando...';
+      codigoPre.textContent = '';
+
+      try {
+        const res = await fetch(ruta);
+        if (!res.ok) throw new Error(`Error HTTP: ${res.status}`);
+
+        const data = await res.json();
+
+        if (data.error) {
+          errorP.textContent = data.error;
+          outputDiv.textContent = '';
+          codigoPre.textContent = '';
+          return;
+        }
+
+        // Mostrar texto plano del resultado (salida DBMS_OUTPUT)
+        outputDiv.textContent = data.salida || 'No hay salida para mostrar.';
+        codigoPre.textContent = data.codigo || 'No hay código para mostrar.';
+
+        // Si recibimos números para mostrar tabla, añadimos la tabla al outputDiv sin borrar texto
+        if (data.numeros && Array.isArray(data.numeros) && data.numeros.length > 0) {
+          let tablaHtml = `
+            <h3>Números almacenados en tbl_num:</h3>
+            <table border="1" cellpadding="5" cellspacing="0" style="margin-top:10px; border-collapse: collapse;">
+              <thead>
+                <tr><th>Número</th></tr>
+              </thead>
+              <tbody>
+                ${data.numeros.map(n => `<tr><td>${n}</td></tr>`).join('')}
+              </tbody>
+            </table>
+          `;
+
+          // Aquí convertimos outputDiv a HTML para agregar tabla
+          outputDiv.innerHTML += tablaHtml;
+        }
+
+      } catch (err) {
+        errorP.textContent = 'Error al cargar: ' + err.message;
+        outputDiv.textContent = '';
+        codigoPre.textContent = '';
+      }
+    }
+  </script>
+</body>
+</html>

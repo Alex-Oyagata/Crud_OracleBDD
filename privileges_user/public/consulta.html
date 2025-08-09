@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Consulta de Privilegios</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <style>
+    body {
+      background: linear-gradient(135deg, #ccefff, #e6f7ff, #b3e0ff);
+      min-height: 100vh;
+      background-attachment: fixed;
+    }
+
+    .card {
+      background-color: rgba(255, 255, 255, 0.95);
+      border-radius: 1rem;
+    }
+
+    h3.card-title {
+      color: #007acc;
+    }
+
+    .table th {
+      background-color: #e0f3ff;
+    }
+
+    code {
+      color: #0d6efd;
+    }
+  </style>
+</head>
+<body>
+  <div class="container py-5">
+    <div class="row justify-content-center">
+      <div class="col-md-10 col-lg-8">
+        <div class="card shadow-sm border-0">
+          <div class="card-body p-4">
+            <h3 class="card-title text-center mb-4">🔍 Consulta de Privilegios</h3>
+            <div id="resultado"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function consultar(username) {
+      const resultado = document.getElementById('resultado');
+
+      fetch(`/privileges/${encodeURIComponent(username)}`)
+        .then(res => {
+          if (!res.ok) throw new Error('Error al consultar la API');
+          return res.json();
+        })
+        .then(data => {
+          resultado.innerHTML = `
+            <div class="alert alert-success">
+              <strong>Privilegios de <code>${data.username}</code>:</strong>
+            </div>
+
+            <h5 class="mt-4">🔐 Privilegios de Sistema</h5>
+            <ul>
+              ${data.sysPrivs.map(p => `<li>${p}</li>`).join('')}
+            </ul>
+
+            <h5 class="mt-4">📄 Privilegios sobre Objetos</h5>
+            ${
+              Array.isArray(data.objPrivs) && data.objPrivs.length
+              ? `<table class="table table-bordered table-sm">
+                  <thead class="table-light">
+                    <tr><th>Owner</th><th>Tabla</th><th>Privilegio</th></tr>
+                  </thead>
+                  <tbody>
+                    ${data.objPrivs.map(p => `
+                      <tr>
+                        <td>${p.owner}</td>
+                        <td>${p.object}</td>
+                        <td>${p.privilege}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>`
+              : `<p>Sin privilegios sobre objetos</p>`
+            }
+
+            <h5 class="mt-4">🛡️ Roles Asignados</h5>
+            <ul>
+              ${data.roles.map(r => `<li>${r}</li>`).join('')}
+            </ul>
+
+            <h5 class="mt-4">📊 Muestras de Datos (primeras 10 filas)</h5>
+            ${
+              Object.keys(data.dataSamples).length
+              ? Object.entries(data.dataSamples).map(([table, rows]) => `
+                  <div class="mb-4">
+                    <h6 class="fw-bold">${table}</h6>
+                    ${
+                      rows.length
+                      ? `<div class="table-responsive">
+                          <table class="table table-sm table-striped table-bordered">
+                            <thead>
+                              <tr>${Object.keys(rows[0]).map(col => `<th>${col}</th>`).join('')}</tr>
+                            </thead>
+                            <tbody>
+                              ${rows.map(row => `
+                                <tr>${Object.values(row).map(val => `<td>${val !== null ? val : ''}</td>`).join('')}</tr>
+                              `).join('')}
+                            </tbody>
+                          </table>
+                        </div>`
+                      : '<p class="text-muted">No se pudieron obtener datos.</p>'
+                    }
+                  </div>
+                `).join('')
+              : '<p>No hay datos disponibles.</p>'
+            }
+          `;
+        })
+        .catch(() => {
+          resultado.innerHTML = `<div class="alert alert-danger">⚠️ No se pudo obtener la información del usuario.</div>`;
+        });
+    }
+
+    // Al cargar la página, extraer el usuario desde la URL y llamar a consultar
+    window.onload = () => {
+      const params = new URLSearchParams(window.location.search);
+      const usuario = params.get('usuario');
+      if (usuario) consultar(usuario);
+      else document.getElementById('resultado').innerHTML = `<div class="alert alert-warning">⚠️ No se proporcionó un nombre de usuario.</div>`;
+    };
+  </script>
+</body>
+</html>

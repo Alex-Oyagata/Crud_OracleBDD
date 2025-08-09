@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Explorador Oracle</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background: linear-gradient(135deg, #ccefff, #e6f7ff, #b3e0ff);
+      min-height: 100vh;
+      background-attachment: fixed;
+    }
+
+    .card {
+      background-color: rgba(255, 255, 255, 0.95);
+      border-radius: 1rem;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      max-width: 800px;
+      margin: auto;
+    }
+
+    h1 {
+      color: #007acc;
+      text-align: center;
+    }
+
+    select, button {
+      margin: 5px 0;
+      padding: 5px;
+      font-size: 16px;
+    }
+
+    #columnasList label {
+      display: block;
+      margin-bottom: 3px;
+    }
+
+    button {
+      cursor: pointer;
+      background-color: #007acc;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      margin: 10px 10px 0 0;
+      padding: 8px 16px;
+    }
+
+    button:hover {
+      background-color: #005f99;
+    }
+
+    pre {
+      background-color: #f4f4f4;
+      padding: 10px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-family: Consolas, monospace;
+      font-size: 14px;
+      color: #0d6efd;
+      white-space: pre-wrap;
+      margin-top: 20px;
+      max-height: 300px;
+    }
+
+    label {
+      font-weight: bold;
+      margin-top: 10px;
+      display: block;
+    }
+
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h1>Explorador Oracle</h1>
+
+    <div>
+      <button id="btnCargarTablas">Cargar Tablas</button>
+    </div>
+
+    <div>
+      <label for="selectTablas">Tablas:</label>
+      <select id="selectTablas" size="5" style="width: 100%; max-width: 300px;"></select>
+    </div>
+
+    <div>
+      <label>Columnas:</label>
+      <div id="columnasList" style="max-height: 150px; overflow-y: auto; border: 1px solid #ccc; padding: 5px; width: 100%; max-width: 300px;"></div>
+    </div>
+
+    <div>
+      <label for="selectSeparador">Separador:</label>
+      <select id="selectSeparador" style="width: 150px;">
+        <option value=",">Coma (,)</option>
+        <option value=";">Punto y coma (;)</option>
+        <option value=" ">Espacio</option>
+        <option value="tab">Tabulación</option>
+        <option value="linea">Nueva Línea</option>
+      </select>
+    </div>
+
+    <div>
+      <button id="btnVerDatos">Ver Datos</button>
+      <button id="btnDescargarDatos">Descargar Datos</button>
+    </div>
+
+    <h2>Resultado:</h2>
+    <pre id="resultado"></pre>
+  </div>
+
+  <script>
+    const btnCargarTablas = document.getElementById('btnCargarTablas');
+    const selectTablas = document.getElementById('selectTablas');
+    const columnasList = document.getElementById('columnasList');
+    const selectSeparador = document.getElementById('selectSeparador');
+    const btnVerDatos = document.getElementById('btnVerDatos');
+    const btnDescargarDatos = document.getElementById('btnDescargarDatos');
+    const resultado = document.getElementById('resultado');
+
+    btnCargarTablas.addEventListener('click', async () => {
+      resultado.textContent = '';
+      columnasList.innerHTML = '';
+      selectTablas.innerHTML = '';
+
+      try {
+        const res = await fetch('/api/tablas');
+        if (!res.ok) throw new Error('Error cargando tablas');
+        const data = await res.json();
+
+        data.tablas.forEach(tabla => {
+          const option = document.createElement('option');
+          option.value = tabla;
+          option.textContent = tabla;
+          selectTablas.appendChild(option);
+        });
+      } catch (e) {
+        alert('Error al cargar tablas');
+        console.error(e);
+      }
+    });
+
+    selectTablas.addEventListener('change', async () => {
+      const tabla = selectTablas.value;
+      columnasList.innerHTML = '';
+      resultado.textContent = '';
+
+      if (!tabla) return;
+
+      try {
+        const res = await fetch(`/api/columnas/${tabla}`);
+        if (!res.ok) throw new Error('Error cargando columnas');
+        const data = await res.json();
+
+        data.columnas.forEach(col => {
+          const label = document.createElement('label');
+          const checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.value = col;
+          checkbox.checked = true;
+          label.appendChild(checkbox);
+          label.appendChild(document.createTextNode(' ' + col));
+          columnasList.appendChild(label);
+        });
+      } catch (e) {
+        alert('Error al cargar columnas');
+        console.error(e);
+      }
+    });
+
+    function obtenerColumnasSeleccionadas() {
+      return Array.from(columnasList.querySelectorAll('input[type="checkbox"]:checked'))
+                  .map(input => input.value);
+    }
+
+    btnVerDatos.addEventListener('click', async () => {
+      const tabla = selectTablas.value;
+      const columnas = obtenerColumnasSeleccionadas();
+      const separador = selectSeparador.value;
+
+      if (!tabla) {
+        alert('Selecciona una tabla');
+        return;
+      }
+      if (columnas.length === 0) {
+        alert('Selecciona al menos una columna');
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/ver-datos/${tabla}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ columnas, separador, accion: 'ver' })
+        });
+        if (!res.ok) throw new Error('Error al obtener datos');
+        const data = await res.json();
+
+        resultado.textContent = data.contenido || 'No hay datos';
+      } catch (e) {
+        alert('Error al obtener datos');
+        console.error(e);
+      }
+    });
+
+    btnDescargarDatos.addEventListener('click', async () => {
+      const tabla = selectTablas.value;
+      const columnas = obtenerColumnasSeleccionadas();
+      const separador = selectSeparador.value;
+
+      if (!tabla) {
+        alert('Selecciona una tabla');
+        return;
+      }
+      if (columnas.length === 0) {
+        alert('Selecciona al menos una columna');
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/ver-datos/${tabla}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ columnas, separador, accion: 'descargar' })
+        });
+        if (!res.ok) throw new Error('Error al descargar datos');
+
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `datos_${tabla}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+      } catch (e) {
+        alert('Error al descargar datos');
+        console.error(e);
+      }
+    });
+  </script>
+
+</body>
+</html>

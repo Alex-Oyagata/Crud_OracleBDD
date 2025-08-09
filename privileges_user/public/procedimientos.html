@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Lista de Empleados</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background: linear-gradient(135deg, #ccefff, #e6f7ff, #b3e0ff);
+      min-height: 100vh;
+      background-attachment: fixed;
+    }
+
+    .card {
+      background-color: rgba(255, 255, 255, 0.95);
+      border-radius: 1rem;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      max-width: 800px;
+      margin: auto;
+    }
+
+    h1 {
+      color: #007acc;
+    }
+
+    ul {
+      padding-left: 20px;
+    }
+
+    li {
+      margin-bottom: 6px;
+    }
+
+    button {
+      padding: 8px 16px;
+      font-size: 16px;
+      cursor: pointer;
+      background-color: #007acc;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      margin: 10px 10px 0 0;
+    }
+
+    button:hover {
+      background-color: #005f99;
+    }
+
+    #error {
+      color: red;
+      margin-top: 10px;
+    }
+
+    pre {
+      background-color: #f4f4f4;
+      padding: 10px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-family: Consolas, monospace;
+      font-size: 14px;
+      color: #0d6efd;
+      white-space: pre-wrap;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Procedimientos Anónimos de Oracle</h1>
+
+    <!-- Botones para las 6 rutas -->
+    <button onclick="cargarRuta('/listar-nombres')">Listar Nombres</button>
+    <button onclick="cargarRuta('/listar-apellidos')">Listar Apellidos</button>
+    <button onclick="cargarRuta('/listar-nombre-email')">Listar Nombre y Email</button>
+    <button onclick="cargarRuta('/listar-nombre-phone')">Listar Nombre y Teléfono</button>
+    <button onclick="cargarRuta('/listar-empleados-detalle')">Listar Nombre, Apellido y Salario</button>
+    <button onclick="cargarRuta('/listar-empleados')">Listar con Cursor Nombre y Apellido</button>
+
+    <p id="error"></p>
+    <ul id="listaEmpleados"></ul>
+    <pre id="bloqueConsulta"></pre>
+  </div>
+
+  <script>
+    const listaEmpleados = document.getElementById('listaEmpleados');
+    const errorP = document.getElementById('error');
+    const bloqueConsulta = document.getElementById('bloqueConsulta');
+
+    function cargarRuta(ruta) {
+      errorP.textContent = '';
+      listaEmpleados.innerHTML = 'Cargando...';
+      bloqueConsulta.textContent = '';
+
+      fetch(ruta)
+        .then(res => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res.json();
+        })
+        .then(data => {
+          mostrarEmpleados(data.empleados, data.consulta);
+        })
+        .catch(err => {
+          listaEmpleados.innerHTML = '';
+          errorP.textContent = 'Error al cargar: ' + err.message;
+        });
+    }
+
+    function mostrarEmpleados(empleados, consulta) {
+      listaEmpleados.innerHTML = '';
+      if (empleados && empleados.length > 0) {
+        empleados.forEach(linea => {
+          const li = document.createElement('li');
+          li.textContent = linea;
+          listaEmpleados.appendChild(li);
+        });
+      } else {
+        listaEmpleados.textContent = 'No hay empleados para mostrar.';
+      }
+
+      if (consulta) {
+        bloqueConsulta.textContent = consulta;
+      }
+    }
+  </script>
+</body>
+</html>
